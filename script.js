@@ -109,7 +109,7 @@ runBtn.onclick = async () => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "llama3-8b-8192", // Fast, free, and smart
+                model: "llama-3.1-8b-instant", // Upgraded to 3.1
                 messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: userPrompt }
@@ -118,7 +118,10 @@ runBtn.onclick = async () => {
             })
         });
 
-        if (!groqResponse.ok) throw new Error("Groq API rejected the request. Check API key.");
+        if (!groqResponse.ok) {
+    const errData = await groqResponse.json();
+    throw new Error(`Groq Error: ${errData.error?.message || 'Unknown Error'}`);
+}
         
         const groqData = await groqResponse.json();
         let aiOutput = groqData.choices[0].message.content;
