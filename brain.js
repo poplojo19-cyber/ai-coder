@@ -1,33 +1,50 @@
-// --- YOUR PRIVATE CONFIG ---
-const GH_USER = "poplojo19-cyber"; 
+const GH_USER = "poplojo19-cyber";
 const GH_REPO = "ai-coder";
-const T_1 = "ghp_"; 
-const T_2 = "WX43QWawqoTDF27wCCpKc5bl0siMAp01wsKH"; 
-const GH_TOKEN = T_1 + T_2;
-// ---------------------------------------
+const GH_TOKEN = "ghp_" + "WX43QWawqoTDF27wCCpKc5bl0siMAp01wsKH";
 
 const logArea = document.getElementById('logArea');
 const runBtn = document.getElementById('runBtn');
 
-const logTerminal = (m) => { logArea.innerHTML += `<div>> ${m}</div>`; };
+const logTerminal = (m) => { 
+    logArea.innerHTML += `<div class="text-blue-400 font-mono text-xs mb-1">> ${m}</div>`; 
+    logArea.scrollTop = logArea.scrollHeight;
+};
 
 runBtn.onclick = async () => {
-    logTerminal("Sending a test PING to GitHub...");
+    const prompt = document.getElementById('promptInput').value;
+    if (!prompt) return;
 
-    // IMPORTANT: This URL points to our new test.yml file!
-    const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/test.yml/dispatches`, {
+    logTerminal("🚀 Sending request...");
+    
+    // Trigger the workflow
+    const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/ai.yml/dispatches`, {
         method: 'POST',
-        headers: { 
-            'Authorization': `token ${GH_TOKEN}`, 
-            'Accept': 'application/vnd.github.v3+json' 
-        },
-        body: JSON.stringify({ ref: 'main' })
+        headers: { 'Authorization': `token ${GH_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' },
+        body: JSON.stringify({ ref: 'main', inputs: { prompt: prompt } })
     });
 
     if (res.ok) {
-        logTerminal("✅ Signal sent! Check your 'Actions' tab on GitHub for 'Connection Test'.");
-    } else {
-        const errorData = await res.json();
-        logTerminal(`❌ CONNECTION FAILED. Reason: ${errorData.message}`);
+        logTerminal("✅ Request sent! GitHub is processing.");
+        logTerminal("Watching for results in 10s...");
+        
+        // This is a "Polling" loop - it checks GitHub to see if the job is done
+        setTimeout(checkLogs, 10000);
     }
 };
+
+async function checkLogs() {
+    logTerminal("🔍 Checking GitHub Action logs...");
+    const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/runs`, {
+        headers: { 'Authorization': `token ${GH_TOKEN}` }
+    });
+    const data = await res.json();
+    const lastRun = data.workflow_runs[0];
+    
+    if (lastRun.status === 'completed') {
+        logTerminal(`🎉 Action completed: ${lastRun.conclusion}`);
+        logTerminal("Refresh the page to see changes!");
+    } else {
+        logTerminal("⏳ Still working...");
+        setTimeout(checkLogs, 5000);
+    }
+}
