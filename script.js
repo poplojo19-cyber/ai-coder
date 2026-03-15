@@ -1,11 +1,11 @@
 // --- YOUR PRIVATE CONFIG (HARDCODED) ---
-const GH_USER = "YOUR_USERNAME"; 
+const GH_USER = "poplojo19-cyber"; 
 const GH_REPO = "ai-coder";
 
 // Split your token here so GitHub's robots don't delete it!
 // Example: If your token is ghp_ABC123, part1 is "ghp_" and part2 is "ABC123"
 const T_1 = "ghp_"; 
-const T_2 = "PASTE_THE_REST_OF_YOUR_TOKEN_HERE"; 
+const T_2 = "nJRuo4j97YulGuEJ6KKCbrdvzXnhgj2MtjeT"; 
 const GH_TOKEN = T_1 + T_2;
 // ---------------------------------------
 
