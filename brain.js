@@ -20,8 +20,12 @@ runBtn.onclick = async () => {
     const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/ai.yml/dispatches`, {
         method: 'POST',
         headers: { 'Authorization': `token ${GH_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' },
-        body: JSON.stringify({ ref: 'main', inputs: { prompt: prompt } })
-    });
+        body: JSON.stringify({ 
+            ref: 'main', 
+            inputs: { 
+                prompt: prompt 
+            } 
+        })
 
     if (res.ok) {
         logTerminal("✅ Request sent! GitHub is processing.");
