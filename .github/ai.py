@@ -1,42 +1,59 @@
-name: AI_Backend
-on:
-  workflow_dispatch:
-    inputs:
-      file_path:
-        required: true
-      prompt:
-        required: true
-jobs:
-  run_ai:
-    runs-on: ubuntu-latest
-    # This explicitly gives the bot permission to edit your files
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4 # Updated to v4 to fix warning
+import os, json, requests, re
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+def run():
+    groq_key = os.environ.get("GROQ_API_KEY")
+    file_path = os.environ.get("FILE_PATH")
+    prompt = os.environ.get("PROMPT")
 
-      - name: Run AI Script
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          FILE_PATH: ${{ github.event.inputs.file_path }}
-          PROMPT: ${{ github.event.inputs.prompt }}
-        run: |
-          pip install requests
-          python .github/ai.py
+    if not os.path.exists(file_path):
+        print(f"Error: {file_path} not found")
+        return
 
-      - name: Commit and Push Changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config user.name "AI-Coder-Bot"
-          git config user.email "bot@ai-coder.com"
-          git add .
-          # This line commits only if there are actual changes
-          git commit -m "🤖 AI: ${{ github.event.inputs.prompt }}" || echo "No changes to commit"
-          git push origin main
+    with open(file_path, "r") as f:
+        original_code = f.read()
+
+    lines = original_code.split('\n')
+    numbered_code = '\n'.join([f"{i+1}: {line}" for i, line in enumerate(lines)])
+
+    system_prompt = "You are a coding tool. You MUST return ONLY a JSON object. No conversation."
+    user_msg = f"In the file below, {prompt}\n\nFile:\n{numbered_code}\n\nReturn JSON: {{\"start_line\": int, \"end_line\": int, \"new_code\": str}}"
+
+    resp = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+        json={
+            "model": "llama-3.1-8b-instant",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_msg}
+            ],
+            "temperature": 0.1
+        }
+    )
+
+    if not resp.ok:
+        print(f"API Error: {resp.text}")
+        return
+
+    full_content = resp.json()["choices"][0]["message"]["content"]
+    
+    try:
+        json_match = re.search(r'\{.*\}', full_content, re.DOTALL)
+        if json_match:
+            changes = json.loads(json_match.group())
+            start = int(changes["start_line"]) - 1
+            end = int(changes["end_line"])
+            new_text = changes["new_code"]
+
+            lines[start:end] = [new_text]
+
+            with open(file_path, "w") as f:
+                f.write('\n'.join(lines))
+            print("Successfully updated file.")
+        else:
+            print("No JSON found")
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    run()
