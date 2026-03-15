@@ -23,7 +23,8 @@ runBtn.onclick = async () => {
         body: JSON.stringify({ 
             ref: 'main', 
             inputs: { 
-                prompt: prompt 
+                prompt: prompt,
+                file_path: "index.html" 
             } 
         })
 
