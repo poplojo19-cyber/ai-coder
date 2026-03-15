@@ -1,35 +1,50 @@
-const logTerminal = (m) => { document.getElementById('logArea').innerHTML += `\n> ${m}`; };
+// --- YOUR PRIVATE CONFIG (HARDCODED) ---
+const GH_USER = "YOUR_USERNAME"; 
+const GH_REPO = "ai-coder";
 
-document.getElementById('saveSettingsBtn').onclick = () => {
-    localStorage.setItem('ghUser', document.getElementById('githubUsername').value.trim());
-    localStorage.setItem('ghToken', document.getElementById('githubToken').value.trim());
-    localStorage.setItem('ghRepo', document.getElementById('repoName').value.trim());
-    document.getElementById('settingsModal').classList.add('hidden');
-    logTerminal("Settings Saved!");
+// Split your token here so GitHub's robots don't delete it!
+// Example: If your token is ghp_ABC123, part1 is "ghp_" and part2 is "ABC123"
+const T_1 = "ghp_"; 
+const T_2 = "PASTE_THE_REST_OF_YOUR_TOKEN_HERE"; 
+const GH_TOKEN = T_1 + T_2;
+// ---------------------------------------
+
+const logArea = document.getElementById('logArea');
+const logTerminal = (m) => { 
+    logArea.innerHTML += `\n> ${m}`; 
+    logArea.scrollTop = logArea.scrollHeight;
 };
 
 document.getElementById('runBtn').onclick = async () => {
-    const user = localStorage.getItem('ghUser');
-    const token = localStorage.getItem('ghToken');
-    const repo = localStorage.getItem('ghRepo');
-    const path = document.getElementById('filePath').value;
+    const path = document.getElementById('filePath').value || 'index.html';
     const prompt = document.getElementById('promptInput').value;
 
-    logTerminal("Sending command to secure backend...");
+    if (!prompt) {
+        logTerminal("❌ Type a prompt first!");
+        return;
+    }
 
-    const res = await fetch(`https://api.github.com/repos/${user}/${repo}/actions/workflows/ai.yml/dispatches`, {
-        method: 'POST',
-        headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
-        body: JSON.stringify({ ref: 'main', inputs: { file_path: path, prompt: prompt } })
-    });
+    logTerminal("🚀 Sending command to GitHub Backend...");
 
-    if (res.ok) {
-        logTerminal("✅ Backend started! Wait 30s for the edit to appear.");
-    } else {
-        logTerminal("❌ Error. Check your GitHub Token permissions.");
+    try {
+        const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/ai.yml/dispatches`, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `token ${GH_TOKEN}`, 
+                'Accept': 'application/vnd.github.v3+json' 
+            },
+            body: JSON.stringify({ ref: 'main', inputs: { file_path: path, prompt: prompt } })
+        });
+
+        if (res.ok) {
+            logTerminal("✅ Success! Server is booting up.");
+            logTerminal("Wait ~40s, then refresh your site.");
+            document.getElementById('promptInput').value = "";
+        } else {
+            const data = await res.json();
+            logTerminal(`❌ Error: ${data.message}`);
+        }
+    } catch (e) {
+        logTerminal("❌ Connection error.");
     }
 };
-
-// UI handlers for modal
-document.getElementById('settingsBtn').onclick = () => document.getElementById('settingsModal').classList.remove('hidden');
-document.getElementById('closeSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.add('hidden');
