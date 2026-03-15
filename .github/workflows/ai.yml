@@ -1,0 +1,28 @@
+name: AI_Backend
+on:
+  workflow_dispatch:
+    inputs:
+      file_path:
+        required: true
+      prompt:
+        required: true
+jobs:
+  run_ai:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Script
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          FILE_PATH: ${{ github.event.inputs.file_path }}
+          PROMPT: ${{ github.event.inputs.prompt }}
+        run: pip install requests && python .github/ai.py
+      - name: Push
+        run: |
+          git config user.name "AI Bot"
+          git config user.email "bot@ai.com"
+          git add .
+          git commit -m "AI Edit: ${{ github.event.inputs.prompt }}" || exit 0
+          git push
