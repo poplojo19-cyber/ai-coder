@@ -3,75 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Coder</title>
-    <!-- We use Tailwind CSS to make it look like a sleek app without needing extra files -->
+    <title>AI Coder Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans p-4 antialiased">
+<body class="bg-black text-gray-100 p-5 font-sans">
 
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6 pt-2">
-        <h1 class="text-2xl font-bold text-blue-400">🤖 AI Coder</h1>
-        <button id="settingsBtn" class="text-2xl p-2 bg-gray-800 rounded-full hover:bg-gray-700">⚙️</button>
-    </div>
+    <h1 class="text-xl font-bold text-blue-500 mb-6">🤖 AI BACKEND CODER</h1>
 
-    <!-- Settings Modal (Hidden by default) -->
-    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center p-4 z-50">
-        <div class="bg-gray-800 p-6 rounded-xl w-full max-w-sm border border-gray-700">
-            <h2 class="text-xl mb-2 font-bold text-white">App Settings</h2>
-            <p class="text-xs text-gray-400 mb-5">Keys stay strictly on your device.</p>
-            
-            <label class="text-xs text-gray-400 mb-1 block">GitHub Username</label>
-            <input type="text" id="githubUsername" placeholder="e.g. your-username" class="w-full mb-4 p-3 bg-gray-900 rounded text-white border border-gray-600 focus:border-blue-400 outline-none">
-            
-            <label class="text-xs text-gray-400 mb-1 block">GitHub Token</label>
-            <input type="password" id="githubToken" placeholder="ghp_..." class="w-full mb-4 p-3 bg-gray-900 rounded text-white border border-gray-600 focus:border-blue-400 outline-none">
-            
-            <label class="text-xs text-gray-400 mb-1 block">Groq API Key</label>
-            <input type="password" id="groqKey" placeholder="gsk_..." class="w-full mb-6 p-3 bg-gray-900 rounded text-white border border-gray-600 focus:border-blue-400 outline-none">
-            
-            <div class="flex justify-end gap-3">
-                <button id="closeSettingsBtn" class="px-4 py-2 bg-gray-700 rounded text-white">Cancel</button>
-                <button id="saveSettingsBtn" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 font-bold rounded text-white">Save Keys</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main App Interface -->
     <div class="space-y-4">
-        <!-- Target Repo & File -->
-        <div class="flex gap-3">
-            <div class="w-1/2">
-                <label class="text-xs text-gray-400 mb-1 block">Repo Name</label>
-                <input type="text" id="repoName" placeholder="ai-coder" class="w-full p-3 bg-gray-800 rounded text-white border border-gray-700 focus:border-blue-400 outline-none">
-            </div>
-            <div class="w-1/2">
-                <label class="text-xs text-gray-400 mb-1 block">File Path</label>
-                <input type="text" id="filePath" placeholder="index.html" class="w-full p-3 bg-gray-800 rounded text-white border border-gray-700 focus:border-blue-400 outline-none">
-            </div>
-        </div>
-        
-        <!-- AI Instructions -->
         <div>
-            <label class="text-xs text-gray-400 mb-1 block">Prompt</label>
-            <textarea id="promptInput" rows="4" placeholder="What should the AI do? (e.g. 'Change the header color to red')" class="w-full p-3 bg-gray-800 rounded text-white border border-gray-700 focus:border-blue-400 outline-none"></textarea>
+            <label class="text-xs text-gray-500 uppercase font-bold">File Path</label>
+            <input type="text" id="filePath" value="index.html" class="w-full p-3 bg-gray-900 rounded border border-gray-800 text-white outline-none focus:border-blue-500">
         </div>
         
-        <!-- Execute Button -->
-        <button id="runBtn" class="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-lg transition-colors shadow-lg shadow-blue-900/20">
-            🚀 Modify Code
+        <div>
+            <label class="text-xs text-gray-500 uppercase font-bold">Prompt</label>
+            <textarea id="promptInput" rows="5" placeholder="What should I change?" class="w-full p-3 bg-gray-900 rounded border border-gray-800 text-white outline-none focus:border-blue-500"></textarea>
+        </div>
+        
+        <button id="runBtn" class="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded font-bold text-white transition-all active:scale-95 shadow-lg shadow-blue-900/20">
+            EXECUTE CHANGE
         </button>
     </div>
 
-    <!-- Output Terminal -->
-    <div class="mt-6">
-        <h3 class="text-xs text-gray-500 mb-2 uppercase tracking-wide font-bold">Terminal Output</h3>
-        <div id="logArea" class="bg-black p-4 rounded-xl h-48 overflow-y-auto text-sm font-mono text-green-400 border border-gray-800 break-words shadow-inner">
-            App initialized. Awaiting commands...
-        </div>
+    <div class="mt-8">
+        <label class="text-xs text-gray-500 uppercase font-bold tracking-widest">System Logs</label>
+        <div id="logArea" class="mt-2 bg-gray-900/50 p-4 rounded border border-gray-800 h-64 overflow-y-auto text-sm font-mono text-green-500 whitespace-pre-wrap">
+Ready for command...</div>
     </div>
 
-    <!-- Link to the Javascript brain (we will make this next) -->
     <script src="script.js"></script>
 </body>
 </html>
