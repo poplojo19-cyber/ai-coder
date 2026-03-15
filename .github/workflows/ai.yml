@@ -2,10 +2,13 @@ name: AI_Backend
 on:
   workflow_dispatch:
     inputs:
-      file_path:
-        required: true
       prompt:
+        description: 'The task'
         required: true
+      file_path:
+        description: 'Optional file'
+        required: false
+        default: 'index.html'
 jobs:
   run_ai:
     runs-on: ubuntu-latest
