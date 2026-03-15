@@ -14,7 +14,7 @@
         </header>
 
         <div id="logArea" class="h-64 overflow-y-auto mb-6 p-4 bg-black/50 border border-gray-800 rounded-lg text-xs font-mono text-blue-400 space-y-2">
-            <div>> System initialized. I can see all your files.</div>
+            <div>> System initialized. Ready for command.</div>
         </div>
 
         <div class="space-y-4">
@@ -26,5 +26,16 @@
             </button>
         </div>
     </div>
-<footer class="text-center text-gray-200 p-4">Powered by OpenClaw Mobile</footer>
+
+    <!-- This script link is what connects your brain -->
+    <script src="brain.js?v=123"></script> 
+    
+    <script>
+        // This will pop up immediately when the page loads. 
+        // If you don't see this, your browser is 100% loading an old version.
+        window.onload = () => {
+            alert("Page Loaded - Check if brain.js is connected!");
+        };
+    </script>
+</body>
 </html>
