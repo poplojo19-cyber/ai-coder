@@ -1,0 +1,11 @@
+name: Connection Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test_job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Receive Ping
+        run: echo "✅ PING RECEIVED! The connection from your website is working perfectly!"
