@@ -15,36 +15,23 @@ const logTerminal = (m) => {
     logArea.scrollTop = logArea.scrollHeight;
 };
 
+// ... keep your GH_USER, GH_REPO, and split GH_TOKEN at the top ...
+
 document.getElementById('runBtn').onclick = async () => {
-    const path = document.getElementById('filePath').value || 'index.html';
     const prompt = document.getElementById('promptInput').value;
+    const log = (m) => { document.getElementById('logArea').innerHTML += `<div>> ${m}</div>`; };
 
-    if (!prompt) {
-        logTerminal("❌ Type a prompt first!");
-        return;
-    }
+    if(!prompt) return;
+    log("Thinking...");
 
-    logTerminal("🚀 Sending command to GitHub Backend...");
+    const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/ai.yml/dispatches`, {
+        method: 'POST',
+        headers: { 'Authorization': `token ${GH_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' },
+        body: JSON.stringify({ ref: 'main', inputs: { file_path: "auto", prompt: prompt } }) // "auto" because AI decides
+    });
 
-    try {
-        const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/ai.yml/dispatches`, {
-            method: 'POST',
-            headers: { 
-                'Authorization': `token ${GH_TOKEN}`, 
-                'Accept': 'application/vnd.github.v3+json' 
-            },
-            body: JSON.stringify({ ref: 'main', inputs: { file_path: path, prompt: prompt } })
-        });
-
-        if (res.ok) {
-            logTerminal("✅ Success! Server is booting up.");
-            logTerminal("Wait ~40s, then refresh your site.");
-            document.getElementById('promptInput').value = "";
-        } else {
-            const data = await res.json();
-            logTerminal(`❌ Error: ${data.message}`);
-        }
-    } catch (e) {
-        logTerminal("❌ Connection error.");
+    if (res.ok) {
+        log("Command sent. AI is analyzing repository structure...");
+        document.getElementById('promptInput').value = "";
     }
 };
