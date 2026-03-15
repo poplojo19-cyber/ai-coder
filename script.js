@@ -5,7 +5,7 @@ const GH_REPO = "ai-coder";
 // Split your token here so GitHub's robots don't delete it!
 // Example: If your token is ghp_ABC123, part1 is "ghp_" and part2 is "ABC123"
 const T_1 = "ghp_"; 
-const T_2 = "nJRuo4j97YulGuEJ6KKCbrdvzXnhgj2MtjeT"; 
+const T_2 = "WX43QWawqoTDF27wCCpKc5bl0siMAp01wsKH"; 
 const GH_TOKEN = T_1 + T_2;
 // ---------------------------------------
 
