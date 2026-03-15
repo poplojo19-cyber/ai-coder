@@ -1,5 +1,5 @@
 // --- YOUR PRIVATE CONFIG ---
-const GH_USER = "YOUR_USERNAME"; 
+const GH_USER = "poplojo19-cyber"; 
 const GH_REPO = "ai-coder";
 const T_1 = "ghp_"; 
 const T_2 = "WX43QWawqoTDF27wCCpKc5bl0siMAp01wsKH"; 
