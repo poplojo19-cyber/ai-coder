@@ -15,7 +15,7 @@ runBtn.onclick = async () => {
     if (!prompt) return;
 
     runBtn.disabled = true;
-    logTerminal("🚀 Transmitting command to GitHub...");
+    logTerminal("🚀 Sending command to GitHub...");
 
     try {
         const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/ai.yml/dispatches`, {
@@ -25,7 +25,7 @@ runBtn.onclick = async () => {
                 'Accept': 'application/vnd.github.v3+json',
                 'Content-Type': 'application/json'
             },
-            // NOTICE: We ONLY send "prompt" now. No "file_path".
+            // NOTICE: No file_path here!
             body: JSON.stringify({ 
                 ref: 'main', 
                 inputs: { prompt: prompt } 
@@ -33,15 +33,14 @@ runBtn.onclick = async () => {
         });
 
         if (res.ok) {
-            logTerminal("✅ Success! Server is booting up.");
-            logTerminal("Wait 30-40s for the change to appear.");
+            logTerminal("✅ Success! AI is thinking...");
             document.getElementById('promptInput').value = "";
         } else {
             const err = await res.json();
-            logTerminal(`❌ GitHub Error: ${err.message}`);
+            logTerminal(`❌ Error: ${err.message}`);
         }
     } catch (e) {
-        logTerminal(`❌ Network Error: ${e.message}`);
+        logTerminal(`❌ Error: ${e.message}`);
     } finally {
         runBtn.disabled = false;
     }
