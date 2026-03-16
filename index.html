@@ -1,107 +1,59 @@
-import os, requests, re, json
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OpenClaw Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(75, 85, 99, 0.3); }
+        .neon-glow { text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+    </style>
+</head>
+<body class="bg-[#050505] text-gray-200 min-h-screen font-sans antialiased flex flex-col items-center justify-center p-4">
 
-def call_agent(system_prompt, user_prompt, groq_key):
-    print("📡 Contacting 70B Brain...")
-    try:
-        resp = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
-            json={
-                "model": "llama-3.3-70b-versatile",
-                "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-                "temperature": 0
-            },
-            timeout=60
-        )
-        return resp.json()["choices"][0]["message"]["content"]
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return None
+    <!-- Glowing Background Decor -->
+    <div class="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-900/20 rounded-full blur-[120px] -z-10"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-900/20 rounded-full blur-[120px] -z-10"></div>
 
-def clean_code(text):
-    # Remove markdown blocks and AI labels
-    text = re.sub(r'```[a-z]*\n|```', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'^(Old code|New code|Search|Replace|Code):\s*', '', text, flags=re.IGNORECASE | re.MULTILINE)
-    return text.strip()
+    <div class="w-full max-w-xl space-y-6">
+        <!-- Header -->
+        <header class="flex items-center justify-between px-2">
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(59,130,246,1)]"></div>
+                <h1 class="text-xl font-mono tracking-widest uppercase text-blue-400 neon-glow font-bold">OpenClaw v4</h1>
+            </div>
+            <span class="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Autonomous Engineer</span>
+        </header>
 
-def run():
-    groq_key = os.environ.get("GROQ_API_KEY")
-    prompt = os.environ.get("PROMPT")
-    
-    print("==================================================")
-    print("🤖 OPENCLAW PRO: DEBUG VERSION")
-    print("==================================================")
+        <!-- Main Terminal UI -->
+        <main class="glass rounded-3xl p-6 shadow-2xl space-y-4">
+            <div class="space-y-2">
+                <label class="text-[10px] text-gray-500 uppercase font-bold tracking-widest ml-1">Task Input</label>
+                <textarea id="promptInput" rows="4" 
+                    class="w-full bg-black/40 border border-gray-800 rounded-2xl p-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all resize-none placeholder:text-gray-700"
+                    placeholder="Describe the feature or change you want..."></textarea>
+            </div>
 
-    # 1. LOAD CODEBASE
-    codebase = {}
-    for root, dirs, files in os.walk("."):
-        if any(x in root for x in [".git", ".github"]): continue
-        for f in files:
-            if f.endswith(('.html', '.js', '.css', '.md')):
-                path = os.path.join(root, f).replace("./", "")
-                with open(path, "r") as file: codebase[path] = file.read()
+            <button id="runBtn" 
+                class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm uppercase tracking-widest rounded-2xl transition-all active:scale-[0.98] shadow-lg shadow-blue-900/20">
+                Execute Command
+            </button>
 
-    # 2. THE SYSTEM PROMPT
-    system_prompt = """You are OpenClaw. You rewrite or edit files to satisfy the user.
-    
-    FORMAT:
-    File: path/to/file.ext
-    <<<<
-    [Search code or leave empty for new file]
-    ====
-    [Replacement code]
-    >>>>
-    """
+            <div class="space-y-2">
+                <label class="text-[10px] text-gray-500 uppercase font-bold tracking-widest ml-1">Process Logs</label>
+                <div id="logArea" class="w-full h-48 bg-black/60 border border-gray-800 rounded-2xl p-4 font-mono text-[11px] text-blue-300 overflow-y-auto space-y-1">
+                    <div>> System Online. Awaiting architecture instructions...</div>
+                </div>
+            </div>
+        </main>
 
-    user_prompt = f"CODEBASE:\n{json.dumps(codebase)}\n\nUSER REQUEST: {prompt}"
-    ai_output = call_agent(system_prompt, user_prompt, groq_key)
+        <footer class="text-center">
+            <p class="text-[10px] text-gray-600 font-mono italic">Connected to Groq 70B Llama-3.3 Engine</p>
+        </footer>
+    </div>
 
-    if not ai_output: return
-    
-    # --- DEBUG: See exactly what the AI said ---
-    print("--- START OF AI RESPONSE ---")
-    print(ai_output)
-    print("--- END OF AI RESPONSE ---")
-
-    # 3. ROBUST PARSING
-    # Find every block: Filename -> Search -> Replace
-    # This regex is more aggressive and ignores chatter between blocks
-    matches = re.finditer(r'(?:File:\s*)([a-zA-Z0-9._/-]+).*?<{4,}\n(.*?)\n+={4,}\n(.*?)\n+>{4,}', ai_output, re.DOTALL | re.IGNORECASE)
-
-    executed = False
-    for m in matches:
-        executed = True
-        filename = m.group(1).strip()
-        search_block = clean_code(m.group(2))
-        replace_block = clean_code(m.group(3))
-        
-        print(f"🛠️  Patching: {filename}")
-
-        try:
-            if "/" in filename: os.makedirs(os.path.dirname(filename), exist_ok=True)
-            
-            # Full Overwrite / Create New
-            if not os.path.exists(filename) or not search_block or len(search_block) < 5:
-                with open(filename, "w") as f: f.write(replace_block)
-                print(f"   ✅ Created/Rewritten {filename}")
-            
-            # Surgical Edit
-            else:
-                with open(filename, "r") as f: content = f.read()
-                if search_block in content:
-                    with open(filename, "w") as f: f.write(content.replace(search_block, replace_block))
-                    print("   ✅ Surgical patch applied.")
-                elif search_block.strip() in content:
-                    with open(filename, "w") as f: f.write(content.replace(search_block.strip(), replace_block))
-                    print("   ✅ Trimmed patch applied.")
-                else:
-                    print(f"   ❌ Search block mismatch in {filename}. AI provided wrong search anchor.")
-
-        except Exception as e:
-            print(f"   ❌ Error: {e}")
-
-    if not executed:
-        print("⚠️ No valid code blocks were detected. The AI might be talking instead of coding.")
-
-if __name__ == "__main__":
-    run()
+    <!-- The Brain Link -->
+    <script src="brain.js?v=400"></script>
+</body>
+</html>
