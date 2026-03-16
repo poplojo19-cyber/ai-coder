@@ -1,153 +1,96 @@
 import os, json, requests, re
 
-def call_ai(system_prompt, user_prompt, groq_key):
+def call_agent(system_prompt, user_prompt, groq_key):
     try:
         resp = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
             json={
                 "model": "llama-3.1-8b-instant",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
+                "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 "temperature": 0.1
             }
         )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+        content = resp.json()["choices"][0]["message"]["content"]
+        # Extract only the JSON tool command
+        match = re.search(r'\{.*\}', content, re.DOTALL)
+        return json.loads(match.group()) if match else None
     except Exception as e:
-        print(f"Groq Error: {e}")
+        print(f"Agent Error: {e}")
         return None
-
-def extract_json(text):
-    try:
-        start = text.find('{')
-        end = text.rfind('}')
-        if start != -1 and end != -1:
-            return json.loads(text[start:end+1])
-        return None
-    except: return None
 
 def run():
     groq_key = os.environ.get("GROQ_API_KEY")
     prompt = os.environ.get("PROMPT")
-
-    print("========================================")
-    print(f"🚀 OPENCLAW AGENT ACTIVATED")
-    print(f"Task: {prompt}")
-    print("========================================")
-
-    # 1. DISCOVERY
-    all_files = [os.path.join(root, f).replace("./", "") for root, dirs, files in os.walk(".") for f in files if not any(x in root for x in [".git", ".github", "__pycache__"])]
     
-    history = []
-    if os.path.exists("memory.json"):
-        try:
-            with open("memory.json", "r") as f: history = json.load(f)
-        except: pass
+    print("🤖 GITHUB COPILOT AGENT ACTIVATED")
 
-    # 2. PLANNING
-    print("🧠 Analyzing project...")
-    plan_system = """You are a Lead Software Engineer. 
-    Decide WHICH single file needs to be modified or created.
-    Respond ONLY with a valid JSON:
-    {"file": "filename.ext", "reasoning": "Why"}"""
-    
-    plan_user = f"Files: {all_files}\nHistory: {history}\nTask: {prompt}"
-    
-    plan_response = call_ai(plan_system, plan_user, groq_key)
-    plan = extract_json(plan_response)
-    
-    if not plan:
-        print("❌ Planning Failed.")
-        return
+    # 1. SCAN THE ENVIRONMENT
+    all_files = [os.path.join(r, f).replace("./", "") for r, d, fs in os.walk(".") for f in fs if not any(x in r for x in [".git", ".github", "__pycache__"])]
 
-    target_file = plan["file"]
-    print(f"🎯 Target: {target_file}")
+    # 2. DECIDE TARGET
+    target_plan = call_agent(
+        "You are an AI planner. Return ONLY JSON: {'file': 'target_filename'}",
+        f"Files: {all_files}\nTask: {prompt}",
+        groq_key
+    )
+    if not target_plan: return
+    target_file = target_plan.get("file", "index.html")
+    print(f"🎯 Target Acquired: {target_file}")
 
-    # 3. PREPARATION
-    original_code = ""
+    # Read current file state
+    current_content = ""
     if os.path.exists(target_file):
-        with open(target_file, "r") as f: original_code = f.read()
-    else:
-        print(f"✨ File '{target_file}' will be created.")
+        with open(target_file, "r") as f: current_content = f.read()
 
-    # 4. EXECUTION (The Search/Replace Engine)
-    print(f"✍️  Writing code for {target_file}...")
-    edit_system = f"""You are an elite coding agent editing '{target_file}'.
-    You MUST use a [SEARCH] and [REPLACE] block to edit the file.
-    
-    CRITICAL RULES:
-    1. The [SEARCH] block must EXACTLY match the existing code you want to change, including indentation.
-    2. The [REPLACE] block contains the new updated code.
-    3. If you are creating a new file, or adding to the very end, leave [SEARCH] completely empty.
-    
-    FORMAT EXAMPLE:
-    [SEARCH]
-    function old() {{
-      return 1;
-    }}
-    [REPLACE]
-    function old() {{
-      return 1;
-    }}
+    # 3. SELECT A WEAPON/TOOL
+    tool_system = """You are an advanced GitHub Agent equipped with 3 tools:
+    1. "create" -> Creates a new file.
+    2. "append" -> Adds code to the bottom of an existing file.
+    3. "replace" -> Replaces a specific block of existing code.
 
-    function new() {{
-      return 2;
-    }}
-    [/REPLACE]"""
+    You MUST respond with a JSON Tool Call:
+    {
+      "tool": "create" | "append" | "replace",
+      "search": "If replacing, put the EXACT old code here. Otherwise leave empty.",
+      "code": "The new code to inject or create"
+    }"""
 
-    edit_user = f"Current File Content:\n{original_code}\n\nTask: {prompt}"
+    tool_user = f"File: {target_file}\n\nCURRENT CONTENT:\n{current_content}\n\nTASK: {prompt}\nSelect your tool."
     
-    edit_response = call_ai(edit_system, edit_user, groq_key)
-    if not edit_response:
-        print("❌ Execution Failed.")
+    action = call_agent(tool_system, tool_user, groq_key)
+    if not action:
+        print("❌ Agent failed to select a tool.")
         return
 
-    # 5. PARSING & APPLYING
+    # 4. EXECUTE THE TOOL IN PYTHON (The "Weapon" firing)
+    tool = action.get("tool")
+    search = action.get("search", "")
+    code = action.get("code", "")
+
     try:
-        search_match = re.search(r'\[SEARCH\](.*?)\[REPLACE\]', edit_response, re.DOTALL)
-        replace_match = re.search(r'\[REPLACE\](.*?)\[/REPLACE\]', edit_response, re.DOTALL)
-
-        if not search_match or not replace_match:
-            # Fallback if AI just outputs raw code for a new file
-            if not os.path.exists(target_file):
-                new_code = edit_response.replace('```javascript', '').replace('```', '').strip()
-                with open(target_file, "w") as f: f.write(new_code)
-                print(f"✅ Created {target_file}")
+        if tool == "create":
+            with open(target_file, "w") as f: f.write(code)
+            print(f"✅ TOOL USED: [CREATE] -> Successfully built {target_file}")
+            
+        elif tool == "append":
+            with open(target_file, "a") as f: f.write("\n" + code)
+            print(f"✅ TOOL USED: [APPEND] -> Safely injected code into {target_file}")
+            
+        elif tool == "replace":
+            if search in current_content:
+                new_content = current_content.replace(search, code)
+                with open(target_file, "w") as f: f.write(new_content)
+                print(f"✅ TOOL USED: [REPLACE] -> Surgically swapped code in {target_file}")
             else:
-                print("❌ Could not find [SEARCH] and [REPLACE] blocks.")
-                print(f"AI Output: {edit_response}")
-            return
-
-        search_text = search_match.group(1).strip('\r\n')
-        replace_text = replace_match.group(1).strip('\r\n')
-
-        if not os.path.exists(target_file) or original_code.strip() == "":
-            with open(target_file, "w") as f: f.write(replace_text)
-            print(f"✅ Successfully wrote to {target_file}")
-        elif search_text == "":
-            with open(target_file, "a") as f: f.write("\n" + replace_text)
-            print(f"✅ Successfully appended to {target_file}")
+                print("⚠️ TOOL MISFIRE: [REPLACE] failed. The AI couldn't find the exact 'search' text.")
+                print(f"AI searched for:\n{search}")
+                
         else:
-            if search_text in original_code:
-                updated_code = original_code.replace(search_text, replace_text)
-                with open(target_file, "w") as f: f.write(updated_code)
-                print(f"✅ Successfully updated {target_file}")
-            else:
-                print("⚠️ Strict SEARCH failed. Attempting fallback replace...")
-                updated_code = original_code.replace(search_text.strip(), replace_text)
-                with open(target_file, "w") as f: f.write(updated_code)
-                print(f"✅ Fallback applied to {target_file}")
-
-        # Update Memory
-        history.append({"task": prompt, "file": target_file})
-        with open("memory.json", "w") as f: json.dump(history[-10:], f, indent=2)
+            print(f"❌ Unknown tool selected: {tool}")
 
     except Exception as e:
-        print(f"❌ Failed to apply edit. Error: {e}")
-        print(f"AI Output:\n{edit_response}")
+        print(f"❌ Execution crash: {e}")
 
 if __name__ == "__main__":
     run()
