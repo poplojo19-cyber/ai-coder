@@ -42,19 +42,15 @@ def run():
     target_file = plan["file"]
     print(f"Targeting: {target_file}")
 
-    # 3. Execution (Editing)
-    original_code = ""
-    if os.path.exists(target_file):
+    # 3. Execution (Editing) - FIXED TO CREATE FILES
+    if not os.path.exists(target_file):
+        print(f"File {target_file} not found. Creating it...")
+        with open(target_file, 'w') as f: f.write("") # Create empty file
+        original_code = ""
+    else:
         with open(target_file, "r") as f: original_code = f.read()
     
     numbered_code = '\n'.join([f"{i+1}: {line}" for i, line in enumerate(original_code.split('\n'))])
-
-    editor_system = "Respond in EXACT format: START_LINE: 1\nEND_LINE: 1\n[CODE_START]\nnew code\n[CODE_END]"
-    edit_resp = get_ai_response(editor_system, f"File:\n{numbered_code}\n\nTask: {prompt}", groq_key)
-    
-    if not edit_resp:
-        print("Failed to get clean edit response.")
-        return
 
     # 4. Final Parsing (Surgical extraction)
     try:
