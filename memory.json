@@ -14,5 +14,9 @@
   {
     "task": "Change the multiplication function in math.js to also divide.",
     "file": "math.js"
+  },
+  {
+    "task": "Add a multiplication function to the end of math.js without breaking the existing functions.",
+    "file": "math.js"
   }
 ]
