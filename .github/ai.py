@@ -12,7 +12,7 @@ def call_agent(system_prompt, user_prompt, groq_key):
             }
         )
         content = resp.json()["choices"][0]["message"]["content"]
-        # Extract only the JSON tool command
+        # Find the master JSON object
         match = re.search(r'\{.*\}', content, re.DOTALL)
         return json.loads(match.group()) if match else None
     except Exception as e:
@@ -23,74 +23,103 @@ def run():
     groq_key = os.environ.get("GROQ_API_KEY")
     prompt = os.environ.get("PROMPT")
     
-    print("🤖 GITHUB COPILOT AGENT ACTIVATED")
+    print("==================================================")
+    print("🧠 OPENCLAW AUTONOMOUS ENGINEER ONLINE")
+    print(f"🗣️ User Request: '{prompt}'")
+    print("==================================================")
 
-    # 1. SCAN THE ENVIRONMENT
-    all_files = [os.path.join(r, f).replace("./", "") for r, d, fs in os.walk(".") for f in fs if not any(x in r for x in [".git", ".github", "__pycache__"])]
+    # 1. FULL CODEBASE VISION
+    # We load the actual contents of every text file into the AI's brain
+    codebase = {}
+    valid_extensions = ('.html', '.js', '.css', '.md', '.py', '.json', '.txt')
+    
+    for root, dirs, files in os.walk("."):
+        if any(x in root for x in [".git", ".github", "__pycache__"]): continue
+        for f in files:
+            if f.endswith(valid_extensions):
+                filepath = os.path.join(root, f).replace("./", "")
+                try:
+                    with open(filepath, "r") as file:
+                        codebase[filepath] = file.read()
+                except: pass
 
-    # 2. DECIDE TARGET
-    target_plan = call_agent(
-        "You are an AI planner. Return ONLY JSON: {'file': 'target_filename'}",
-        f"Files: {all_files}\nTask: {prompt}",
-        groq_key
-    )
-    if not target_plan: return
-    target_file = target_plan.get("file", "index.html")
-    print(f"🎯 Target Acquired: {target_file}")
+    print(f"👁️ Scanned {len(codebase)} files. Analyzing architecture...")
 
-    # Read current file state
-    current_content = ""
-    if os.path.exists(target_file):
-        with open(target_file, "r") as f: current_content = f.read()
-
-    # 3. SELECT A WEAPON/TOOL
-    tool_system = """You are an advanced GitHub Agent equipped with 3 tools:
-    1. "create" -> Creates a new file.
-    2. "append" -> Adds code to the bottom of an existing file.
-    3. "replace" -> Replaces a specific block of existing code.
-
-    You MUST respond with a JSON Tool Call:
+    # 2. THE MASTER PLAN
+    system_prompt = """You are an Autonomous AI Software Engineer.
+    You will receive a dictionary of the ENTIRE codebase and a vague user request.
+    You must figure out what needs to be created, modified, or deleted across multiple files to achieve the goal perfectly.
+    
+    You MUST respond with a SINGLE JSON object in this EXACT format:
     {
-      "tool": "create" | "append" | "replace",
-      "search": "If replacing, put the EXACT old code here. Otherwise leave empty.",
-      "code": "The new code to inject or create"
+      "thoughts": "Explain your master plan here...",
+      "operations": [
+        {
+          "tool": "create" | "append" | "replace" | "delete",
+          "file": "path/to/file.ext",
+          "search": "If replace, put exact old code here. Else empty.",
+          "code": "The new code."
+        }
+      ]
     }"""
 
-    tool_user = f"File: {target_file}\n\nCURRENT CONTENT:\n{current_content}\n\nTASK: {prompt}\nSelect your tool."
-    
-    action = call_agent(tool_system, tool_user, groq_key)
-    if not action:
-        print("❌ Agent failed to select a tool.")
+    user_prompt = f"CODEBASE STATE:\n{json.dumps(codebase)}\n\nUSER REQUEST: {prompt}\n\nExecute the plan."
+
+    print("⏳ Formulating multi-step execution plan...")
+    plan = call_agent(system_prompt, user_prompt, groq_key)
+
+    if not plan or "operations" not in plan:
+        print("❌ Agent failed to create a valid master plan.")
         return
 
-    # 4. EXECUTE THE TOOL IN PYTHON (The "Weapon" firing)
-    tool = action.get("tool")
-    search = action.get("search", "")
-    code = action.get("code", "")
+    print(f"💡 MASTER PLAN: {plan.get('thoughts', 'Executing steps...')}")
+    print("--------------------------------------------------")
 
-    try:
-        if tool == "create":
-            with open(target_file, "w") as f: f.write(code)
-            print(f"✅ TOOL USED: [CREATE] -> Successfully built {target_file}")
-            
-        elif tool == "append":
-            with open(target_file, "a") as f: f.write("\n" + code)
-            print(f"✅ TOOL USED: [APPEND] -> Safely injected code into {target_file}")
-            
-        elif tool == "replace":
-            if search in current_content:
-                new_content = current_content.replace(search, code)
-                with open(target_file, "w") as f: f.write(new_content)
-                print(f"✅ TOOL USED: [REPLACE] -> Surgically swapped code in {target_file}")
-            else:
-                print("⚠️ TOOL MISFIRE: [REPLACE] failed. The AI couldn't find the exact 'search' text.")
-                print(f"AI searched for:\n{search}")
+    # 3. THE EXECUTION LOOP
+    operations = plan["operations"]
+    for i, op in enumerate(operations):
+        tool = op.get("tool")
+        target_file = op.get("file")
+        search = op.get("search", "")
+        code = op.get("code", "")
+        
+        print(f"[{i+1}/{len(operations)}] Executing [{tool.upper()}] on {target_file}...")
+
+        try:
+            # Ensure folders exist (e.g., if AI wants to create css/style.css)
+            if "/" in target_file:
+                os.makedirs(os.path.dirname(target_file), exist_ok=True)
+
+            if tool == "create":
+                with open(target_file, "w") as f: f.write(code)
+                print("   ✅ File created.")
                 
-        else:
-            print(f"❌ Unknown tool selected: {tool}")
+            elif tool == "append":
+                with open(target_file, "a") as f: f.write("\n" + code)
+                print("   ✅ Code appended.")
+                
+            elif tool == "replace":
+                if os.path.exists(target_file):
+                    with open(target_file, "r") as f: current = f.read()
+                    if search in current:
+                        with open(target_file, "w") as f: f.write(current.replace(search, code))
+                        print("   ✅ Surgical replace successful.")
+                    else:
+                        print("   ⚠️ Search text not found. Fallback: Replacing entire file.")
+                        with open(target_file, "w") as f: f.write(code)
+                else:
+                    print("   ❌ Target file missing for replace.")
+                    
+            elif tool == "delete":
+                if os.path.exists(target_file):
+                    os.remove(target_file)
+                    print("   🗑️ File deleted.")
+                    
+        except Exception as e:
+            print(f"   ❌ Step failed: {e}")
 
-    except Exception as e:
-        print(f"❌ Execution crash: {e}")
+    print("==================================================")
+    print("🎉 ALL OPERATIONS COMPLETED")
 
 if __name__ == "__main__":
     run()
