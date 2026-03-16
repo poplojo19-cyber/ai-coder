@@ -1,5 +1,24 @@
 import os, json, requests, re
 
+def extract_json(text):
+    """An Ironclad JSON parser that fixes AI formatting mistakes."""
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if not match: return None
+    s = match.group()
+    
+    try:
+        # strict=False allows actual multiline strings (which AI loves to do)
+        return json.loads(s, strict=False)
+    except Exception as e:
+        # FALLBACK: If the AI messed up backslashes (e.g. \w or \"), fix them automatically
+        s_fixed = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', s)
+        try:
+            return json.loads(s_fixed, strict=False)
+        except Exception as e2:
+            print(f"CRITICAL JSON ERROR: {e2}")
+            print(f"RAW OUTPUT THAT CRASHED:\n{text}")
+            return None
+
 def call_agent(system_prompt, user_prompt, groq_key):
     try:
         resp = requests.post(
@@ -11,10 +30,8 @@ def call_agent(system_prompt, user_prompt, groq_key):
                 "temperature": 0.1
             }
         )
-        content = resp.json()["choices"][0]["message"]["content"]
-        # Find the master JSON object
-        match = re.search(r'\{.*\}', content, re.DOTALL)
-        return json.loads(match.group()) if match else None
+        resp.raise_for_status()
+        return extract_json(resp.json()["choices"][0]["message"]["content"])
     except Exception as e:
         print(f"Agent Error: {e}")
         return None
@@ -28,8 +45,7 @@ def run():
     print(f"🗣️ User Request: '{prompt}'")
     print("==================================================")
 
-    # 1. FULL CODEBASE VISION
-    # We load the actual contents of every text file into the AI's brain
+    # 1. FULL CODEBASE VISION (Safely load files up to 10,000 chars to avoid token limits)
     codebase = {}
     valid_extensions = ('.html', '.js', '.css', '.md', '.py', '.json', '.txt')
     
@@ -40,28 +56,31 @@ def run():
                 filepath = os.path.join(root, f).replace("./", "")
                 try:
                     with open(filepath, "r") as file:
-                        codebase[filepath] = file.read()
+                        content = file.read()
+                        if len(content) < 10000:  # Prevent massive files from crashing the AI
+                            codebase[filepath] = content
                 except: pass
 
     print(f"👁️ Scanned {len(codebase)} files. Analyzing architecture...")
 
     # 2. THE MASTER PLAN
     system_prompt = """You are an Autonomous AI Software Engineer.
-    You will receive a dictionary of the ENTIRE codebase and a vague user request.
-    You must figure out what needs to be created, modified, or deleted across multiple files to achieve the goal perfectly.
+    You will receive a dictionary of the ENTIRE codebase and a user request.
+    Decide what needs to be created, modified, or deleted across multiple files.
     
     You MUST respond with a SINGLE JSON object in this EXACT format:
     {
-      "thoughts": "Explain your master plan here...",
+      "thoughts": "Explain your plan.",
       "operations": [
         {
           "tool": "create" | "append" | "replace" | "delete",
           "file": "path/to/file.ext",
-          "search": "If replace, put exact old code here. Else empty.",
+          "search": "If replace, put exact old code here. Else leave empty.",
           "code": "The new code."
         }
       ]
-    }"""
+    }
+    CRITICAL: Properly escape all quotes and backslashes inside your code values!"""
 
     user_prompt = f"CODEBASE STATE:\n{json.dumps(codebase)}\n\nUSER REQUEST: {prompt}\n\nExecute the plan."
 
@@ -69,7 +88,7 @@ def run():
     plan = call_agent(system_prompt, user_prompt, groq_key)
 
     if not plan or "operations" not in plan:
-        print("❌ Agent failed to create a valid master plan.")
+        print("❌ Agent failed to create a valid master plan. See logs above.")
         return
 
     print(f"💡 MASTER PLAN: {plan.get('thoughts', 'Executing steps...')}")
@@ -81,12 +100,15 @@ def run():
         tool = op.get("tool")
         target_file = op.get("file")
         search = op.get("search", "")
+        
+        # Clean the code (Sometimes AI wraps it in ```css ... ``` inside the JSON)
         code = op.get("code", "")
+        code = re.sub(r'^```[a-z]*\n|```$', '', code, flags=re.MULTILINE).strip('\n')
         
         print(f"[{i+1}/{len(operations)}] Executing [{tool.upper()}] on {target_file}...")
 
         try:
-            # Ensure folders exist (e.g., if AI wants to create css/style.css)
+            # Auto-create directories if they don't exist
             if "/" in target_file:
                 os.makedirs(os.path.dirname(target_file), exist_ok=True)
 
@@ -105,7 +127,7 @@ def run():
                         with open(target_file, "w") as f: f.write(current.replace(search, code))
                         print("   ✅ Surgical replace successful.")
                     else:
-                        print("   ⚠️ Search text not found. Fallback: Replacing entire file.")
+                        print("   ⚠️ Strict search failed. Fallback: Overwriting file.")
                         with open(target_file, "w") as f: f.write(code)
                 else:
                     print("   ❌ Target file missing for replace.")
