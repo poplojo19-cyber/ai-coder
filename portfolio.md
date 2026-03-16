@@ -1,4 +1,7 @@
----
+# Create a new file called style.css
+touch style.css
+
+# Add the following code to style.css to make it look modern
 title: My Portfolio
 author: [Your Name]
 date: [Current Date]
