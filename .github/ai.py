@@ -12,12 +12,11 @@ def get_ai_response(system_prompt, user_prompt, groq_key):
             }
         )
         content = resp.json()["choices"][0]["message"]["content"]
-        # NUCLEAR OPTION: Find the very first '{' and the very last '}' 
-        # and parse that specific string
-        start = content.find('{')
-        end = content.rfind('}')
-        if start != -1 and end != -1:
-            return content[start:end+1]
+        
+        # LAZY PARSING: Finds only the first valid JSON object and ignores everything after
+        match = re.search(r'\{[^{]*?\}', content, re.DOTALL)
+        if match:
+            return match.group()
         return None
     except Exception as e:
         print(f"AI/JSON Error: {e}")
@@ -30,18 +29,17 @@ def run():
     # 1. Discovery
     all_files = [os.path.join(root, f).replace("./", "") for root, dirs, files in os.walk(".") for f in files if not any(x in root for x in [".git", ".github", "__pycache__"])]
     
-    # 2. Planning (Thinking)
-    planner_system = "You are a coding agent. Return ONLY raw JSON. No explanation."
-    planner_user = f"Files: {all_files}. Task: '{prompt}'. Respond ONLY with JSON: {{\"file\": \"filename\", \"thought\": \"reasoning\"}}"
+    # 2. Planning
+    planner_system = "You are a coding agent. Respond ONLY with a single JSON object. No extra text."
+    planner_user = f"Files: {all_files}. Task: '{prompt}'. Respond ONLY with: {{\"file\": \"filename\", \"thought\": \"reasoning\"}}"
     
     plan_text = get_ai_response(planner_system, planner_user, groq_key)
     if not plan_text: 
-        print("Failed to get clean JSON from AI.")
+        print("Failed to get clean JSON plan.")
         return
     
     plan = json.loads(plan_text)
     target_file = plan["file"]
-    print(f"AI THOUGHTS: {plan.get('thought', 'No thoughts')}")
     print(f"Targeting: {target_file}")
 
     # 3. Execution (Editing)
@@ -52,15 +50,23 @@ def run():
     numbered_code = '\n'.join([f"{i+1}: {line}" for i, line in enumerate(original_code.split('\n'))])
 
     editor_system = "Respond in EXACT format: START_LINE: 1\nEND_LINE: 1\n[CODE_START]\nnew code\n[CODE_END]"
-    edit_resp = get_ai_response(editor_system, f"File Content:\n{numbered_code}\n\nTask: {prompt}", groq_key)
+    edit_resp = get_ai_response(editor_system, f"File:\n{numbered_code}\n\nTask: {prompt}", groq_key)
     
-    # 4. Final Parsing
+    if not edit_resp:
+        print("Failed to get clean edit response.")
+        return
+
+    # 4. Final Parsing (Surgical extraction)
     try:
         s_line = int(re.search(r'START_LINE:\s*(\d+)', edit_resp).group(1))
         e_line = int(re.search(r'END_LINE:\s*(\d+)', edit_resp).group(1))
         new_code = re.search(r'\[CODE_START\](.*?)\[CODE_END\]', edit_resp, re.DOTALL).group(1).strip('\n')
         
         lines = original_code.split('\n')
+        # Handle cases where the file might be empty
+        if not lines or lines == ['']: lines = []
+        
+        # Apply the edit
         lines[max(0, s_line-1) : e_line] = [new_code]
         
         with open(target_file, "w") as f: f.write('\n'.join(lines))
@@ -68,7 +74,6 @@ def run():
             
     except Exception as e:
         print(f"Failed to apply: {e}")
-        print(f"Raw AI response was: {edit_resp}")
 
 if __name__ == "__main__":
     run()
