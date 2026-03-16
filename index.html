@@ -6,14 +6,26 @@
     <title>OpenClaw</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col p-4 items-center justify-center">
-
-    <div class="w-full max-w-md">
-        <textarea id="promptInput" class="w-full p-4 bg-gray-800 rounded-xl" placeholder="Prompt..."></textarea>
-        <button id="runBtn" class="w-full mt-4 p-4 bg-blue-600 font-bold rounded-xl">SEND REQUEST</button>
+<body class="bg-gradient-to-b from-gray-900 to-black text-white min-h-screen flex flex-col items-center justify-center">
+    <nav class="w-full bg-gray-800 bg-opacity-50 backdrop-filter backdrop-blur-md py-4 fixed top-0 left-0 flex justify-between items-center">
+        <div class="ml-4 text-2xl font-bold text-neon-green">OpenClaw</div>
+        <ul class="mr-4 flex justify-end items-center space-x-4">
+            <li><a href="#" class="text-lg text-white hover:text-neon-green transition duration-300">Home</a></li>
+            <li><a href="#" class="text-lg text-white hover:text-neon-green transition duration-300">About</a></li>
+            <li><a href="#" class="text-lg text-white hover:text-neon-green transition duration-300">Contact</a></li>
+        </ul>
+    </nav>
+    <div class="w-full max-w-md mt-20">
+        <textarea id="promptInput" class="w-full p-4 bg-gray-800 rounded-xl border border-gray-700 hover:border-neon-green focus:border-neon-green transition duration-300" placeholder="Prompt..."></textarea>
+        <button id="runBtn" class="w-full mt-4 p-4 bg-blue-600 font-bold rounded-xl hover:bg-neon-green hover:text-black transition duration-300">SEND REQUEST</button>
         <div id="logArea" class="mt-4 font-mono text-xs text-green-500"></div>
     </div>
 
     <script src="brain.js?v=999"></script>
+    <style>
+        .text-neon-green {
+            color: #39FF14;
+        }
+    </style>
 </body>
 </html>
