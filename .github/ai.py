@@ -6,7 +6,7 @@ def call_agent(system_prompt, user_prompt, groq_key):
             "https://api.groq.com/openai/v1/chat/completions",
             headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
             json={
-                "model": "llama-3.1-8b-instant",
+                "model": "llama-3.3-70b-versatile", # 🚀 UPGRADED TO 70B GENIUS MODEL
                 "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 "temperature": 0.1
             }
@@ -22,11 +22,11 @@ def run():
     prompt = os.environ.get("PROMPT")
     
     print("==================================================")
-    print("🤖 OPENCLAW UNBREAKABLE AUTONOMOUS ENGINEER")
-    print(f"🗣️ User Request: '{prompt}'")
+    print("🚀 OPENCLAW V3: 70B SENIOR ENGINEER ACTIVE")
+    print(f"🗣️ Request: '{prompt}'")
     print("==================================================")
 
-    # 1. READ ENTIRE CODEBASE
+    # 1. READ CODEBASE
     codebase = {}
     for root, dirs, files in os.walk("."):
         if any(x in root for x in [".git", ".github", "__pycache__"]): continue
@@ -36,102 +36,83 @@ def run():
                 try:
                     with open(filepath, "r") as file:
                         content = file.read()
-                        if len(content) < 15000: # Protect against massive files
-                            codebase[filepath] = content
+                        if len(content) < 15000: codebase[filepath] = content
                 except: pass
 
-    # 2. THE UNBREAKABLE SYSTEM PROMPT
-    # We use tags like <edit> instead of JSON so it never crashes.
-    system_prompt = """You are an Elite Autonomous Frontend Engineer.
-    You receive the current codebase and a user request.
+    # 2. THE AIDER-STYLE SYSTEM PROMPT
+    system_prompt = """You are an Elite Frontend Engineer.
+    1. UI RULES: Use Tailwind CSS extensively. Create modern, glassmorphism, dark-themed UIs. Make it look like a high-end AI startup.
+    2. HTML RULES: Do not put raw HTML outside of <body>.
     
-    YOUR RULES:
-    1. AESTHETICS: Use Tailwind CSS, glassmorphism, flexbox/grid, and professional colors. Make it look like a modern AI startup.
-    2. ARCHITECTURE: HTML inside <body>. CSS in <head>. Scripts at bottom of <body>. Fix broken structures.
+    You edit files by outputting SEARCH/REPLACE blocks.
     
-    RESPOND EXACTLY IN THIS TEXT FORMAT (DO NOT USE JSON):
+    FORMAT RULES:
+    File: path/to/file.ext
+    <<<<
+    Exact lines of original code to replace
+    ====
+    New lines of code to insert
+    >>>>
     
-    THOUGHTS:
-    Explain your architectural decisions here.
+    - To create a new file, leave the <<<< section empty.
+    - You can use multiple blocks.
+    - Explain your design thoughts first, then output the blocks."""
 
-    <create file="path/to/new.ext">
-    [code for the new file here]
-    </create>
-
-    <edit file="path/to/existing.ext">
-    <search>
-    [Exact old code block to replace]
-    </search>
-    <replace>
-    [The new code that replaces the old code]
-    </replace>
-    </edit>
-    
-    You can use multiple <create> or <edit> blocks. Ensure <search> blocks EXACTLY match the existing code."""
-
-    # We format the codebase into a clean string
     codebase_str = ""
     for file, code in codebase.items():
         codebase_str += f"\n--- FILE: {file} ---\n{code}\n"
 
-    user_prompt = f"CODEBASE STATE:\n{codebase_str}\n\nUSER REQUEST: {prompt}\n\nExecute the plan."
+    user_prompt = f"CODEBASE:\n{codebase_str}\n\nUSER REQUEST: {prompt}"
 
-    print("🧠 Analyzing codebase and formulating architecture...")
+    print("🧠 Analyzing architecture with 70B Model...")
     plan_text = call_agent(system_prompt, user_prompt, groq_key)
 
     if not plan_text:
-        print("❌ Agent failed to generate a plan.")
+        print("❌ Agent failed to respond.")
         return
 
-    # Extract thoughts
-    thoughts_match = re.search(r'THOUGHTS:\s*(.*?)(?=<create|<edit|$)', plan_text, re.DOTALL)
-    print(f"💡 AGENT THOUGHTS: {thoughts_match.group(1).strip() if thoughts_match else 'Executing...'}")
-    print("--------------------------------------------------")
-
-    # 3. EXECUTE <create> BLOCKS
-    creates = re.finditer(r'<create file="(.*?)">(.*?)</create>', plan_text, re.DOTALL)
-    for match in creates:
-        target_file = match.group(1)
-        code = match.group(2).strip('\n')
-        
-        print(f"📁 Action: CREATE -> {target_file}")
-        try:
-            if "/" in target_file: os.makedirs(os.path.dirname(target_file), exist_ok=True)
-            with open(target_file, "w") as f: f.write(code)
-            print("   ✅ File created successfully.")
-        except Exception as e:
-            print(f"   ❌ Failed: {e}")
-
-    # 4. EXECUTE <edit> BLOCKS
-    edits = re.finditer(r'<edit file="(.*?)">\s*<search>(.*?)</search>\s*<replace>(.*?)</replace>\s*</edit>', plan_text, re.DOTALL)
-    for match in edits:
-        target_file = match.group(1)
+    # 3. PARSE AND EXECUTE BLOCKS
+    # Regex to find: File: filename \n <<<< \n search \n ==== \n replace \n >>>>
+    blocks = re.finditer(r'File:\s*([^\n]+)\n+<<<<\n(.*?)\n+====\n(.*?)\n+>>>>', plan_text, re.DOTALL)
+    
+    executed = False
+    for match in blocks:
+        executed = True
+        target_file = match.group(1).strip()
         search_text = match.group(2).strip('\n')
         replace_text = match.group(3).strip('\n')
         
-        print(f"✂️  Action: EDIT -> {target_file}")
+        print(f"✂️  Targeting: {target_file}")
+        
         try:
-            if os.path.exists(target_file):
-                with open(target_file, "r") as f: current_code = f.read()
+            if "/" in target_file: os.makedirs(os.path.dirname(target_file), exist_ok=True)
+            
+            # Create new file
+            if not os.path.exists(target_file) or search_text == "":
+                with open(target_file, "w") as f: f.write(replace_text)
+                print("   ✅ Created/Overwritten successfully.")
+                continue
                 
-                # Strict Search
-                if search_text in current_code:
-                    with open(target_file, "w") as f: f.write(current_code.replace(search_text, replace_text))
-                    print("   ✅ Surgical block replacement successful.")
-                # Fallback: Ignore leading/trailing whitespace
-                elif search_text.strip() in current_code:
-                    with open(target_file, "w") as f: f.write(current_code.replace(search_text.strip(), replace_text))
-                    print("   ✅ Fallback replacement successful (ignored whitespace).")
-                else:
-                    print("   ⚠️ Search block not found. Appending to end of file as failsafe.")
-                    with open(target_file, "a") as f: f.write("\n" + replace_text)
+            # Edit existing file
+            with open(target_file, "r") as f: current_code = f.read()
+            
+            if search_text in current_code:
+                new_code = current_code.replace(search_text, replace_text)
+                with open(target_file, "w") as f: f.write(new_code)
+                print("   ✅ Surgical replace successful.")
+            elif search_text.strip() in current_code:
+                new_code = current_code.replace(search_text.strip(), replace_text)
+                with open(target_file, "w") as f: f.write(new_code)
+                print("   ✅ Fallback replace successful (ignored whitespace).")
             else:
-                print("   ❌ Target file does not exist.")
+                print("   ❌ ABORTED: Could not find exact search text in file to replace. Code safe.")
+                
         except Exception as e:
-            print(f"   ❌ Execution error: {e}")
+            print(f"   ❌ Error applying block: {e}")
 
-    print("==================================================")
-    print("🎉 ALL TASKS COMPLETED")
+    if not executed:
+        print("⚠️ No valid edit blocks found in AI response.")
+        print(f"RAW OUTPUT:\n{plan_text}")
 
 if __name__ == "__main__":
     run()
