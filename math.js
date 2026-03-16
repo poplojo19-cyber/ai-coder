@@ -7,5 +7,5 @@ function add(a, b) {
 
 // Function to subtract two numbers
 function subtract(a, b) {
-10:   return a * b;
-11:   return a / b;
+  return a - b;
+}
