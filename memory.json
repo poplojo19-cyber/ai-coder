@@ -1,1 +1,14 @@
-[{"task": "Add a small footer at the bottom of index.html that says 'Powered by OpenClaw Mobile'", "file": "index.html"}, {"task": "create an html file", "file": "newfile.html"}]
+[
+  {
+    "task": "Add a small footer at the bottom of index.html that says 'Powered by OpenClaw Mobile'",
+    "file": "index.html"
+  },
+  {
+    "task": "create an html file",
+    "file": "newfile.html"
+  },
+  {
+    "task": "Create a file called math.js. Write a function that adds two numbers, and a function that subtracts two numbers.",
+    "file": "math.js"
+  }
+]
