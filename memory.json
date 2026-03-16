@@ -10,5 +10,9 @@
   {
     "task": "Create a file called math.js. Write a function that adds two numbers, and a function that subtracts two numbers.",
     "file": "math.js"
+  },
+  {
+    "task": "Change the multiplication function in math.js to also divide.",
+    "file": "math.js"
   }
 ]
