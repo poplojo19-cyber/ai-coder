@@ -5,10 +5,20 @@
     <title>OpenClaw</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-black text-white p-5">
+<body class="bg-black text-white p-5" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
     <textarea id="promptInput" class="w-full p-2 bg-gray-800 text-white" placeholder="Prompt..."></textarea>
     <button id="runBtn" class="w-full mt-2 p-4 bg-blue-600 font-bold">SEND REQUEST</button>
     <div id="logArea" class="mt-4 font-mono text-xs text-green-500"></div>
     <script src="brain.js?v=999"></script>
 </body>
 </html>
+
+<link rel="stylesheet" href="css/styles.css">
+<nav>
+  <ul>
+    <li><a href="#">Home</a></li>
+    <li><a href="#">About</a></li>
+    <li><a href="#">Contact</a></li>
+  </ul>
+</nav>
+<script src="brain.js"></script>

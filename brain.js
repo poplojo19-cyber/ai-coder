@@ -40,3 +40,8 @@ document.getElementById('runBtn').onclick = async () => {
         logArea.innerHTML += `<div>> ❌ Crash: ${err.message}</div>`;
     }
 };
+
+document.addEventListener('DOMContentLoaded', function() {
+  const nav = document.querySelector('nav');
+  nav.style.display = 'flex';
+});
