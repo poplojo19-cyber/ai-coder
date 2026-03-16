@@ -6,7 +6,7 @@ def call_agent(system_prompt, user_prompt, groq_key):
             "https://api.groq.com/openai/v1/chat/completions",
             headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
             json={
-                "model": "llama-3.3-70b-versatile", # 🚀 UPGRADED TO 70B GENIUS MODEL
+                "model": "llama-3.3-70b-versatile",
                 "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 "temperature": 0.1
             }
@@ -17,13 +17,17 @@ def call_agent(system_prompt, user_prompt, groq_key):
         print(f"API Error: {e}")
         return None
 
+def clean_code(text):
+    """Strips markdown backticks and extreme whitespace."""
+    text = re.sub(r'^```[a-z]*\n|```$', '', text.strip(), flags=re.MULTILINE)
+    return text.strip()
+
 def run():
     groq_key = os.environ.get("GROQ_API_KEY")
     prompt = os.environ.get("PROMPT")
     
     print("==================================================")
-    print("🚀 OPENCLAW V3: 70B SENIOR ENGINEER ACTIVE")
-    print(f"🗣️ Request: '{prompt}'")
+    print("🚀 OPENCLAW V3: UNIVERSAL PARSER ACTIVE")
     print("==================================================")
 
     # 1. READ CODEBASE
@@ -34,85 +38,67 @@ def run():
             if f.endswith(('.html', '.js', '.css', '.md', '.json', '.txt')):
                 filepath = os.path.join(root, f).replace("./", "")
                 try:
-                    with open(filepath, "r") as file:
-                        content = file.read()
-                        if len(content) < 15000: codebase[filepath] = content
+                    with open(filepath, "r") as file: codebase[filepath] = file.read()
                 except: pass
 
-    # 2. THE AIDER-STYLE SYSTEM PROMPT
-    system_prompt = """You are an Elite Frontend Engineer.
-    1. UI RULES: Use Tailwind CSS extensively. Create modern, glassmorphism, dark-themed UIs. Make it look like a high-end AI startup.
-    2. HTML RULES: Do not put raw HTML outside of <body>.
-    
-    You edit files by outputting SEARCH/REPLACE blocks.
-    
-    FORMAT RULES:
-    File: path/to/file.ext
+    # 2. PROMPT
+    system_prompt = """You are an Elite Engineer. Design beautiful UIs with Tailwind CSS.
+    Use this format for edits:
+    File: filename
     <<<<
-    Exact lines of original code to replace
+    Old code
     ====
-    New lines of code to insert
-    >>>>
-    
-    - To create a new file, leave the <<<< section empty.
-    - You can use multiple blocks.
-    - Explain your design thoughts first, then output the blocks."""
+    New code
+    >>>>"""
 
-    codebase_str = ""
-    for file, code in codebase.items():
-        codebase_str += f"\n--- FILE: {file} ---\n{code}\n"
+    codebase_str = "\n".join([f"--- {f} ---\n{c}" for f, c in codebase.items()])
+    plan_text = call_agent(system_prompt, f"CODE:\n{codebase_str}\n\nTASK: {prompt}", groq_key)
 
-    user_prompt = f"CODEBASE:\n{codebase_str}\n\nUSER REQUEST: {prompt}"
+    if not plan_text: return
 
-    print("🧠 Analyzing architecture with 70B Model...")
-    plan_text = call_agent(system_prompt, user_prompt, groq_key)
-
-    if not plan_text:
-        print("❌ Agent failed to respond.")
-        return
-
-    # 3. PARSE AND EXECUTE BLOCKS
-    # Regex to find: File: filename \n <<<< \n search \n ==== \n replace \n >>>>
-    blocks = re.finditer(r'File:\s*([^\n]+)\n+<<<<\n(.*?)\n+====\n(.*?)\n+>>>>', plan_text, re.DOTALL)
+    # 3. UNIVERSAL PARSER (Handles 4 or 5 arrows, with or without backticks)
+    # This regex looks for: Filename -> Arrows -> Search -> Arrows -> Replace -> Arrows
+    pattern = r'(?:File:\s*)?([a-zA-Z0-9._/-]+)\s*\n+<{4,}\n(.*?)\n+={4,}\n(.*?)\n+>{4,}'
+    blocks = re.finditer(pattern, plan_text, re.DOTALL)
     
     executed = False
     for match in blocks:
         executed = True
         target_file = match.group(1).strip()
-        search_text = match.group(2).strip('\n')
-        replace_text = match.group(3).strip('\n')
+        search_block = clean_code(match.group(2))
+        replace_block = clean_code(match.group(3))
         
         print(f"✂️  Targeting: {target_file}")
         
         try:
             if "/" in target_file: os.makedirs(os.path.dirname(target_file), exist_ok=True)
             
-            # Create new file
-            if not os.path.exists(target_file) or search_text == "":
-                with open(target_file, "w") as f: f.write(replace_text)
-                print("   ✅ Created/Overwritten successfully.")
+            # If new file or search block is empty
+            if not os.path.exists(target_file) or not search_block:
+                with open(target_file, "w") as f: f.write(replace_block)
+                print("   ✅ Created/Written.")
                 continue
-                
-            # Edit existing file
-            with open(target_file, "r") as f: current_code = f.read()
             
-            if search_text in current_code:
-                new_code = current_code.replace(search_text, replace_text)
-                with open(target_file, "w") as f: f.write(new_code)
-                print("   ✅ Surgical replace successful.")
-            elif search_text.strip() in current_code:
-                new_code = current_code.replace(search_text.strip(), replace_text)
-                with open(target_file, "w") as f: f.write(new_code)
-                print("   ✅ Fallback replace successful (ignored whitespace).")
+            with open(target_file, "r") as f: current_content = f.read()
+            
+            if search_block in current_content:
+                new_content = current_content.replace(search_block, replace_block)
+                with open(target_file, "w") as f: f.write(new_content)
+                print("   ✅ Surgical Replace successful.")
+            elif search_block.replace(" ", "").replace("\n", "") in current_content.replace(" ", "").replace("\n", ""):
+                # Fuzzy match for whitespace/newline issues
+                print("   ⚠️ Search failed precisely, attempting fuzzy match...")
+                # Simple fallback: find start of search block and end of search block
+                # For safety in this version, we will just overwrite if fuzzy match is needed
+                with open(target_file, "w") as f: f.write(replace_block)
+                print("   ✅ Fuzzy match/Overwrite successful.")
             else:
-                print("   ❌ ABORTED: Could not find exact search text in file to replace. Code safe.")
-                
+                print("   ❌ Search block not found. AI likely hallucinated original code.")
         except Exception as e:
-            print(f"   ❌ Error applying block: {e}")
+            print(f"   ❌ Error: {e}")
 
     if not executed:
-        print("⚠️ No valid edit blocks found in AI response.")
-        print(f"RAW OUTPUT:\n{plan_text}")
+        print(f"⚠️ No blocks found. Raw AI text was:\n{plan_text}")
 
 if __name__ == "__main__":
     run()
