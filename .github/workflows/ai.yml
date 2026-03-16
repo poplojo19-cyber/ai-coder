@@ -3,12 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       prompt:
-        description: 'The task'
         required: true
-      file_path:
-        description: 'Optional file'
-        required: false
-        default: 'index.html'
 jobs:
   run_ai:
     runs-on: ubuntu-latest
@@ -16,20 +11,21 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Run AI
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install Dependencies
+        run: pip install requests
+      - name: Run AI Script
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          FILE_PATH: ${{ github.event.inputs.file_path }}
           PROMPT: ${{ github.event.inputs.prompt }}
-        run: |
-          pip install requests
-          python .github/ai.py
-      - name: Push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .github/ai.py
+      - name: Commit and Push
         run: |
           git config user.name "AI-Bot"
           git config user.email "bot@ai.com"
           git add .
-          git commit -m "AI Edit" || exit 0
+          git commit -m "AI Update" || exit 0
           git push origin main
