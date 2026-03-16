@@ -3,7 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <title>OpenClaw</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/main.css">
+</replace>
+
+<search>
+  <body class="bg-black text-white p-5" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+</search>
+<replace>
+  <body class="bg-black text-white p-5" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <nav>
+      <ul>
+        <li><a href="#">Home</a></li>
+        <li><a href="#">About</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </nav>
+    <div class="card">
+      <textarea id="promptInput" class="w-full p-2 bg-gray-800 text-white" placeholder="Prompt..."></textarea>
+      <button id="runBtn" class="w-full mt-2 p-4 bg-blue-600 font-bold">SEND REQUEST</button>
+      <div id="logArea" class="mt-4 font-mono text-xs text-green-500"></div>
+    </div>
+    <div class="calculator">
+      <input type="text" id="display" disabled>
+      <div class="buttons">
+        <button id="clear">Clear</button>
+        <button id="add">+</button>
+        <button id="subtract">-</button>
+        <button id="multiply">*</button>
+        <button id="divide">/</button>
+        <button id="equals">=</button>
+      </div>
+    </div>
+  </body>
+</replace>
+
+<search>
+  <script src="brain.js?v=999"></script>
+</search>
+<replace>
+  <script src="js/brain.js"></script>
+</replace>
+
+<search>
+  <script>
+    // Calculator Interface
+    const display = document.getElementById('display');
+    const clearBtn = document.getElementById('clear');
+    const addBtn = document.getElementById('add');
+    const subtractBtn = document.getElementById('subtract');
+    const multiplyBtn = document.getElementById('multiply');
+    const divideBtn = document.getElementById('divide');
+    const equalsBtn = document.getElementById('equals');
+
+    clearBtn.addEventListener('click', () => {
+      display.value = '';
+    });
+
+    addBtn.addEventListener('click', () => {
+      display.value += '+';
+    });
+
+    subtractBtn.addEventListener('click', () => {
+      display.value += '-';
+    });
+
+    multiplyBtn.addEventListener('click', () => {
+      display.value += '*';
+    });
+
+    divideBtn.addEventListener('click', () => {
+      display.value += '/';
+    });
+
+    equalsBtn.addEventListener('click', () => {
+      const expression = display.value;
+      const result = eval(expression);
+      display.value = result;
+    });
+  </script>
+</search>
+<replace>
+  <script src="js/calculator.js"></script>
 </head>
 <body class="bg-black text-white p-5" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
     <textarea id="promptInput" class="w-full p-2 bg-gray-800 text-white" placeholder="Prompt..."></textarea>
