@@ -1,47 +1,48 @@
-const GH_USER = "poplojo19-cyber";
-const GH_REPO = "ai-coder";
-const GH_TOKEN = "ghp_" + "WX43QWawqoTDF27wCCpKc5bl0siMAp01wsKH"; // Put your token here
+// --- CONFIG ---
+const GH_USER = "poplojo19-cyber"; const GH_REPO = "ai-coder"; const GH_TOKEN = "ghp_" + "WX43QWawqoTDF27wCCpKc5bl0siMAp01wsKH"; // Put your token here
+// --------------
 
-document.getElementById('runBtn').onclick = async () => {
+const logArea = document.getElementById('logArea');
+const runBtn = document.getElementById('runBtn');
+
+const logTerminal = (m) => { 
+    logArea.innerHTML += `<div>> ${m}</div>`; 
+    logArea.scrollTop = logArea.scrollHeight;
+};
+
+runBtn.onclick = async () => {
     const prompt = document.getElementById('promptInput').value;
-    const logArea = document.getElementById('logArea');
-    
-    if (!prompt) {
-        alert("Please enter a prompt!");
-        return;
-    }
+    if (!prompt) return;
 
-    logArea.innerHTML += "<div>> Sending request to GitHub...</div>";
+    runBtn.disabled = true;
+    logTerminal("🚀 Transmitting command to GitHub...");
 
     try {
-        const response = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/ai.yml/dispatches`, {
+        const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/ai.yml/dispatches`, {
             method: 'POST',
             headers: { 
                 'Authorization': `token ${GH_TOKEN}`, 
                 'Accept': 'application/vnd.github.v3+json',
                 'Content-Type': 'application/json'
             },
+            // NOTICE: We ONLY send "prompt" now. No "file_path".
             body: JSON.stringify({ 
                 ref: 'main', 
-                inputs: { 
-                    prompt: prompt,
-                    file_path: 'index.html' 
-                } 
+                inputs: { prompt: prompt } 
             })
         });
 
-        if (response.ok) {
-            logArea.innerHTML += "<div>> ✅ Success! Check the Actions tab.</div>";
+        if (res.ok) {
+            logTerminal("✅ Success! Server is booting up.");
+            logTerminal("Wait 30-40s for the change to appear.");
+            document.getElementById('promptInput').value = "";
         } else {
-            const error = await response.text();
-            logArea.innerHTML += `<div>> ❌ Error: ${error}</div>`;
+            const err = await res.json();
+            logTerminal(`❌ GitHub Error: ${err.message}`);
         }
-    } catch (err) {
-        logArea.innerHTML += `<div>> ❌ Crash: ${err.message}</div>`;
+    } catch (e) {
+        logTerminal(`❌ Network Error: ${e.message}`);
+    } finally {
+        runBtn.disabled = false;
     }
 };
-
-document.addEventListener('DOMContentLoaded', function() {
-  const nav = document.querySelector('nav');
-  nav.style.display = 'flex';
-});
