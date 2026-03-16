@@ -1,1 +1,6 @@
-[]
+[
+  {
+    "task": "Read math.js. Add a new multiplication function at the very bottom of the file",
+    "file": "math.js"
+  }
+]
